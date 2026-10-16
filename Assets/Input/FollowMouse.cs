@@ -7,11 +7,15 @@ public class FollowMouse : MonoBehaviour
     public Transform[] fruitObj;
     static public string spawnedYet = "n";
     static public Vector2 cloudxPos;
-    static public Vector2 spawnPos;
-    static public string newFruit = "n"; 
-    static public int whichFruit = 0;
 
+    private static FollowMouse instance;
     private Vector3 move2;
+
+    void Awake ()
+    {
+        instance = this;
+    }
+
     void Update ()
     {
         spawnFruit ();
@@ -32,7 +36,6 @@ public class FollowMouse : MonoBehaviour
         {
             spawnedYet = "n";
         }
-        replaceFruit ();
     }
     void spawnFruit()
     {
@@ -43,19 +46,23 @@ public class FollowMouse : MonoBehaviour
         }
     }
 
-    void replaceFruit ()
+    // Called by Fruitcon when two fruits of the same type merge.
+    // The largest fruit has no next level, so its pair just disappears.
+    static public void MergeFruit (int fruitIndex, Vector2 position)
     {
-        if (newFruit == "y")
+        int next = fruitIndex + 1;
+        if (next >= instance.fruitObj.Length)
         {
-            newFruit = "n";
-            Instantiate (fruitObj[whichFruit + 1], spawnPos, fruitObj[1].rotation);
+            return;
         }
+        Instantiate (instance.fruitObj[next], position, instance.fruitObj[1].rotation);
     }
 
     IEnumerator spawntimer ()
     {
         yield return new WaitForSeconds (.5f);
-        Instantiate(fruitObj[Random.Range(0,4)], transform.position, fruitObj[1].rotation);
+        Transform fruit = Instantiate(fruitObj[Random.Range(0,4)], transform.position, fruitObj[1].rotation);
+        fruit.GetComponent<Fruitcon>().inCloud = true;
         spawnedYet = "y";
     }
 }

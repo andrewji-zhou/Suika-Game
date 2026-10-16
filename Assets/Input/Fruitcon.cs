@@ -4,39 +4,67 @@ using UnityEngine;
 
 public class Fruitcon : MonoBehaviour
 {
-    private string inthecloud = "y";
-    // Start is called before the first frame update
+    // True while the fruit is hovering at the dropper waiting to be dropped.
+    public bool inCloud = false;
+
+    private bool merged = false;
+    private Rigidbody2D body;
+    private Collider2D col;
+
+    void Awake()
+    {
+        body = GetComponent<Rigidbody2D>();
+        col = GetComponent<Collider2D>();
+    }
+
     void Start()
     {
-        if (transform.position.y < 3)
+        if (inCloud)
         {
-            inthecloud = "n";
+            // Held fruit: no gravity and no collisions until it is dropped.
+            body.gravityScale = 0;
+            col.enabled = false;
+        }
+        else
+        {
+            // Merge results (and anything else spawned in the pile) fall immediately.
+            body.gravityScale = 1;
         }
     }
 
-    // Update is called once per frame
     void Update()
     {
-        if (inthecloud == "y") {
-            GetComponent<Transform>().position = FollowMouse.cloudxPos;
-        }
+        if (!inCloud) return;
 
-        if (Input.GetKeyDown("space")) {
-            GetComponent<Rigidbody2D>().gravityScale = 1;
-            inthecloud = "n";
+        // z is 0 to match where dropped fruits have always sat.
+        transform.position = new Vector3(FollowMouse.cloudxPos.x, FollowMouse.cloudxPos.y, 0f);
+
+        if (Input.GetKeyDown("space"))
+        {
+            body.gravityScale = 1;
+            col.enabled = true;
+            inCloud = false;
         }
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (collision.gameObject.tag == gameObject.tag)
-        {
-            FollowMouse.spawnPos = transform.position;
-            FollowMouse.newFruit = "y";
-            FollowMouse.whichFruit = int.Parse(gameObject.tag);
-            Destroy(gameObject);
-        }
+        if (inCloud || merged) return;
+        if (collision.gameObject.tag != gameObject.tag) return;
+
+        Fruitcon other = collision.gameObject.GetComponent<Fruitcon>();
+        if (other == null || other.inCloud || other.merged) return;
+
+        // Both fruits get this callback; only one of them performs the merge.
+        if (GetInstanceID() > other.GetInstanceID()) return;
+
+        merged = true;
+        other.merged = true;
+
+        Vector2 midpoint = (transform.position + other.transform.position) / 2f;
+        FollowMouse.MergeFruit(int.Parse(gameObject.tag), midpoint);
+
+        Destroy(other.gameObject);
+        Destroy(gameObject);
     }
 }
-
-
